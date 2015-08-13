@@ -12,7 +12,7 @@ Create a VICredentialStore with credentials for your vcenter server and credenti
 
 **PowerCLI commands to create the VICredentialStore file.**
 
-Passwords are hashed but are reversable.  Rights to the file are restricted to the user who creates the file
+Passwords are hashed but are reversible.  Rights to the file are restricted to the user who creates the file
 ```
 New-VICredentialStoreItem -Host <vcenter_name> -User <user_name> -Password <password> -File 'c:\Path\To\Credential\File.xml'
 New-VICredentialStoreItem -Host <esxi_server_01> -User <user_name> -Password <password> -File 'c:\Path\To\Credential\File.xml'
