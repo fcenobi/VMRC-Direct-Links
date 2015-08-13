@@ -4,6 +4,7 @@ Creates an HTML file with direct VMRC links for VMware VMs located in vCenter.  
 **Tested With**
 - Powershell 4
 - PowerCLI 6.0
+- vSphere 5.5, 6.0
 
 **Configuration**
 Create a VICredentialStore with credentials for your vcenter server and credentials for every ESXi server in the cluster.
