@@ -78,7 +78,7 @@ $credential = Get-VICredentialStoreItem -Host $vcenter -File $credPath
 Connect-VIServer -Server $vcenter -User $credential.User -Password $credential.Password
 
 # Load all the VMs from the vmFolder if defined or all VMs from the cluster
-if($vmFolder.Length > 0){
+if($vmFolder.Length -gt 0){
 	$folder = Get-FolderFromPath($vmFolder)
 	if($folder -eq $null){
 	    Write-Host "ERROR: $vmFolder Path NOT FOUND!  Halting."
@@ -111,35 +111,45 @@ ForEach($esxihost in $hosts){
     # Get the credential from the file
     $credential = Get-VICredentialStoreItem -Host $esxihost.Name -File $credPath
 
-    # Connect to the ESXi Host using the retrieved credentials
-    Connect-VIServer -Server $esxihost.Name -User $credential.User -Password $credential.Password
+    Try{
+    	# Connect to the ESXi Host using the retrieved credentials
+		$conn = Connect-VIServer -Server $esxihost.Name -User $credential.User -Password $credential.Password
+        if($conn.IsConnected){
+            Write-Host "Connected to: $conn.Name"
 
-    # Get all VMs on the ESXi Host
-    $hostVMs = Get-VM -Location $esxihost.Name | Select Id,Name,VMHost
+            # Get all VMs on the ESXi Host
+            $hostVMs = Get-VM -Location $esxihost.Name | Select Id,Name,VMHost
 
-    # Check each VM on the host to see if it matches a VM pulled from the cluster or folder path
-    ForEach($hostVM in $hostVMs){
-        if(($vms.Name).Contains($hostVM.Name)){            
+            # Check each VM on the host to see if it matches a VM pulled from the cluster or folder path
+            ForEach($hostVM in $hostVMs){
+                if(($vms.Name).Contains($hostVM.Name)){            
             
-            # Get the MoID from the Id string
-            $moid = (([String]$hostVM.Id).Split('-'))[1]
-            # Generate the VMRC link in HTML with the VM name as the Text
-            $link="<a href='vmrc://@$($hostVM.VMHost)/?moid=$($moid)'>$($hostVM.Name)</a>"
-            # Pull the description of the VM
-            $vmDesc=($vms | Where-Object -Property Name -eq -Value $hostVM.Name).Description
+                    # Get the MoID from the Id string
+                    $moid = (([String]$hostVM.Id).Split('-'))[1]
+                    # Generate the VMRC link in HTML with the VM name as the Text
+                    $link="<a href='vmrc://@$($hostVM.VMHost)/?moid=$($moid)'>$($hostVM.Name)</a>"
+                    # Pull the description of the VM
+                    $vmDesc=($vms | Where-Object -Property Name -eq -Value $hostVM.Name).Description
 
-            # Build a new objec with all the information
-            $obj = New-Object System.Object            
-            $obj | Add-Member -MemberType NoteProperty -Name VMRCLink -Value $link
-            $obj | Add-Member -MemberType NoteProperty -Name Description -Value $vmDesc
+                    # Build a new objec with all the information
+                    $obj = New-Object System.Object            
+                    $obj | Add-Member -MemberType NoteProperty -Name VMRCLink -Value $link
+                    $obj | Add-Member -MemberType NoteProperty -Name Description -Value $vmDesc
             
-            # Add the object to the array of VMs w/ VMRC links
-            $outVMs += $obj
+                    # Add the object to the array of VMs w/ VMRC links
+                    $outVMs += $obj
+                }
+            }
+
+            # Disconnect from the ESXi Host
+            Disconnect-VIServer $esxihost.Name -Confirm:$false
+        }else{
+            Write-Host "Connection Failed For: $esxihost"
         }
-    }
-
-    # Disconnect from the ESXi Host
-    Disconnect-VIServer $esxihost.Name -Confirm:$false
+    }Catch{
+      $err = $_.Exception.Message
+      Write-Host $err 
+    }    
 }
 
 # If there is at least 1 VM to output generate the output file
